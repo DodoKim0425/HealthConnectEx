@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">HealthConnectEx</string>
+    <string name="menu">menu</string>
+
+    <!-- Screen titles -->
+    <string name="home_screen">Home screen</string>
+    <string name="sleep_data_screen">Sleep Data Screen</string>
+
+    <!-- Home Screen -->
+    <string name="welcome_message">Welcome to Health Connect!</string>
+    <string name="health_connect_logo">Health Connect logo</string>
+    <string name="installed_welcome_message">
+        Health Connect is installed on this device. Use the menu to explore the sample, with each
+        screen demonstrating a different aspect of Health Connect functionality.
+    </string>
 </resources>
