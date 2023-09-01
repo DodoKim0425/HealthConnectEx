@@ -31,38 +31,38 @@ fun HealthConnectNavigation(
             )
         }
 
-        composable(Screen.SleepDataScreen.route) {
-            val viewModel: SleepSessionViewModel = viewModel(
-                factory = SleepSessionViewModelFactory(
-                    healthConnectManager = healthConnectManager
-                )
-            )
-            val permissionsGranted by viewModel.permissionsGranted
-            val sessionsList by viewModel.sessionsList
-            val permissions = viewModel.permissions
-            val onPermissionsResult = { viewModel.initialLoad() }
-            val permissionsLauncher =
-                rememberLauncherForActivityResult(viewModel.permissionsLauncher) {
-                    onPermissionsResult()
-                }
-            SleepSessionScreen(
-                permissionsGranted = permissionsGranted,
-                permissions = permissions,
-                sessionsList = sessionsList,
-                uiState = viewModel.uiState,
-                onInsertClick = {
-                    viewModel.generateSleepData()
-                },
-                onError = { exception ->
-                    showExceptionSnackbar(scaffoldState, scope, exception)
-                },
-                onPermissionsResult = {
-                    viewModel.initialLoad()
-                },
-                onPermissionsLaunch = { values ->
-                    permissionsLauncher.launch(values)
-                }
-            )
-        }
+//        composable(Screen.SleepDataScreen.route) {
+//            val viewModel: SleepSessionViewModel = viewModel(
+//                factory = SleepSessionViewModelFactory(
+//                    healthConnectManager = healthConnectManager
+//                )
+//            )
+//            val permissionsGranted by viewModel.permissionsGranted
+//            val sessionsList by viewModel.sessionsList
+//            val permissions = viewModel.permissions
+//            val onPermissionsResult = { viewModel.initialLoad() }
+//            val permissionsLauncher =
+//                rememberLauncherForActivityResult(viewModel.permissionsLauncher) {
+//                    onPermissionsResult()
+//                }
+//            SleepSessionScreen(
+//                permissionsGranted = permissionsGranted,
+//                permissions = permissions,
+//                sessionsList = sessionsList,
+//                uiState = viewModel.uiState,
+//                onInsertClick = {
+//                    viewModel.generateSleepData()
+//                },
+//                onError = { exception ->
+//                    showExceptionSnackbar(scaffoldState, scope, exception)
+//                },
+//                onPermissionsResult = {
+//                    viewModel.initialLoad()
+//                },
+//                onPermissionsLaunch = { values ->
+//                    permissionsLauncher.launch(values)
+//                }
+//            )
+//        }
     }
 }
