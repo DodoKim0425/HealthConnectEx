@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.runtime.mutableStateOf
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectClient.Companion.SDK_UNAVAILABLE
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -20,7 +21,6 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import androidx.health.connect.client.units.Mass
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
@@ -37,7 +37,7 @@ class HealthConnectManager(private val context: Context) {
     private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
 
     // 헬스 커넥트 지원 되는지 여부를 저장하는 변수
-    var availability = mutableStateOf(HealthConnectAvailability.NOT_SUPPORTED)
+    var availability = mutableStateOf(SDK_UNAVAILABLE)
         private set
 
     init {
@@ -46,12 +46,7 @@ class HealthConnectManager(private val context: Context) {
 
     // 현재 기기가 헬스 커넥트 지원이 되는지, 설치 되어있는지 확인
     fun checkAvailability() {
-        //헬스 커넥트 지원 안되는 기기인 경우 NOT_SUPPORTED, 설치 안되어있으면 NOT_INSTALLED, 지원되고 설치되어있으면 SDK_AVAILABLE
-        availability.value = when {
-            HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.INSTALLED
-            isSupported() -> HealthConnectAvailability.NOT_INSTALLED
-            else -> HealthConnectAvailability.NOT_SUPPORTED
-        }
+        availability.value = HealthConnectClient.getSdkStatus(context)
     }
 
     // 지정한 모든 권한이 이미 부여되었는지 여부를 결정합니다.
@@ -66,6 +61,10 @@ class HealthConnectManager(private val context: Context) {
     // 권한이 이미 부여된 경우 이 함수를 통해 권한 요청할 필요 없다
     fun requestPermissionsActivityContract(): ActivityResultContract<Set<String>, Set<String>> {
         return PermissionController.createRequestPermissionResultContract()
+    }
+
+    suspend fun revokeAllPermissions() {
+        healthConnectClient.permissionController.revokeAllPermissions()
     }
 
     //특정 날짜의 수면 데이터를 가져오는 함수
@@ -207,6 +206,11 @@ class HealthConnectManager(private val context: Context) {
         do {
             val response = healthConnectClient.getChanges(nextChangesToken)
             if (response.changesTokenExpired) {
+                //여기에 설명된 바와 같이 https://developer.android.com/guide/health-and-fitness/health-connect/data-and-data-types/differential-changes-api
+                // 토큰은 30일 동안만 유효합니다. 토큰이 만료되었는지 확인하는 것이 중요합니다.
+                // 토큰을 사용하는 것에 대한 폴백(예: 특정 날짜 이후 데이터 가져오기)
+                // 이 있는지 확인할 뿐만 아니라 앱은 토큰이 만료되지 않도록
+                // 변경 API를 충분히 정기적으로 사용해야 합니다.
                 throw IOException("Changes token has expired")
             }
             emit(ChangesMessage.ChangeList(response.changes))
@@ -230,18 +234,9 @@ class HealthConnectManager(private val context: Context) {
         return healthConnectClient.readRecords(request).records
     }
 
-    private fun isSupported() = Build.VERSION.SDK_INT >= MIN_SUPPORTED_SDK
-
     // Represents the two types of messages that can be sent in a Changes flow.
     sealed class ChangesMessage {
         data class NoMoreChanges(val nextChangesToken: String) : ChangesMessage()
         data class ChangeList(val changes: List<Change>) : ChangesMessage()
     }
-}
-
-// 헬스커넥트가 설치되어 있는지, 지원되는 버전의 기기인지 판단하는 값 클래스
-enum class HealthConnectAvailability {
-    INSTALLED,
-    NOT_INSTALLED,
-    NOT_SUPPORTED
 }
