@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.healthconnectex.data.HealthConnectManager
 import com.example.healthconnectex.ui.screen.home.HomeScreen
+import com.example.healthconnectex.ui.screen.sleepdata.SleepDataScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -29,6 +30,10 @@ fun HealthConnectNavigation(
                     healthConnectManager.checkAvailability()
                 }
             )
+        }
+
+        composable(Screen.SleepDataScreen.route){
+            SleepDataScreen()
         }
 
 //        composable(Screen.SleepDataScreen.route) {
