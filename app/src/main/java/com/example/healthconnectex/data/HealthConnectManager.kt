@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
 import java.time.Instant
+import java.time.ZonedDateTime
 
 private const val TAG = "HealthConnectManager"
 
@@ -53,6 +54,12 @@ class HealthConnectManager(private val context: Context) {
     // 권한 흐름에서 먼저 [PermissionController.getGrantedPermissions]를 호출하는 것이 좋습니다.(지금 밑에 있는 함수)
     // 권한이 이미 부여된 경우 [PermissionController.requestPermissionResultContract]를 통해 권한을 요청할 필요가 없습니다.
     suspend fun hasAllPermissions(permissions: Set<String>): Boolean {
+        Log.d(
+            TAG, "hasAllPermissions: 권한 있는지 확인이요 ${
+                healthConnectClient.permissionController.getGrantedPermissions()
+                    .containsAll(permissions)
+            }"
+        )
         return healthConnectClient.permissionController.getGrantedPermissions()
             .containsAll(permissions)
     }
@@ -71,28 +78,16 @@ class HealthConnectManager(private val context: Context) {
     //ReadRecordsRequest는 헬스 데이터 기록을 읽는함수다
     //SleepSessionRecord를 SleepSessionData로 변경하여 반환한다
     //SleepSessinRcord에 대하여: https://developer.android.com/reference/androidx/health/connect/client/records/SleepSessionRecord
-    suspend fun readSleepDataOneDay(date: Instant): SleepSessionData {
+    suspend fun readSleepDataOneDay(date: ZonedDateTime){
+        val startTime = date.minusDays(7)
         val request = ReadRecordsRequest(
             recordType = SleepSessionRecord::class, //어떤 데이터인지 정한다
-            timeRangeFilter = TimeRangeFilter.between(date, date), //언제부터 언제까지 데이터를 가져올지 정한다
+            timeRangeFilter = TimeRangeFilter.between(startTime.toInstant(), date.toInstant()), //언제부터 언제까지 데이터를 가져올지 정한다
             ascendingOrder = false //내림차순 정렬하여 반환
             //dataOriginFilter = //특정 앱이 저장한 데이터만 골라서 가져올수있다, 패키지 이름을 적으면됨
         )
         val response = healthConnectClient.readRecords(request)
-        var sleepSessionDataOneDay: SleepSessionData = SleepSessionData(
-            uid = "",
-            title = "",
-            notes = "",
-            startTime = date,
-            startZoneOffset = null,
-            endTime = date,
-            endZoneOffset = null,
-            duration = null,
-            stages = listOf()
-        )
-
-        Log.d(TAG, "readSleepDataOneDay: ${response.records.size}")
-
+        Log.d(TAG, "readSleepDataOneDay: ${startTime} ~ ${date} ${response.records.size}")
         response.records.forEach { session ->
             val sessionTimeFilter = TimeRangeFilter.between(session.startTime, session.endTime)
             val durationAggregateRequest = AggregateRequest(
@@ -100,21 +95,45 @@ class HealthConnectManager(private val context: Context) {
                 timeRangeFilter = sessionTimeFilter
             )
             val aggregateResponse = healthConnectClient.aggregate(durationAggregateRequest)
-            sleepSessionDataOneDay =
-                SleepSessionData(
-                    uid = session.metadata.id,
-                    title = session.title,
-                    notes = session.notes,
-                    startTime = session.startTime,
-                    startZoneOffset = session.startZoneOffset,
-                    endTime = session.endTime,
-                    endZoneOffset = session.endZoneOffset,
-                    duration = aggregateResponse[SleepSessionRecord.SLEEP_DURATION_TOTAL],
-                    stages = session.stages
-                )
-
+            Log.d(TAG, "readSleepDataOneDay: ${session.startZoneOffset}")
+            Log.d(TAG, "readSleepDataOneDay: ${session.startTime} ~ ${session.endTime} : ${aggregateResponse[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.formatHoursMinutes()}")
         }
-        return sleepSessionDataOneDay
+//        var sleepSessionDataOneDay: SleepSessionData = SleepSessionData(
+//            uid = "",
+//            title = "",
+//            notes = "",
+//            startTime = date,
+//            startZoneOffset = null,
+//            endTime = date,
+//            endZoneOffset = null,
+//            duration = null,
+//            stages = listOf()
+//        )
+//
+//        Log.d(TAG, "readSleepDataOneDay: ${response.records.size}")
+//
+//        response.records.forEach { session ->
+//            val sessionTimeFilter = TimeRangeFilter.between(session.startTime, session.endTime)
+//            val durationAggregateRequest = AggregateRequest(
+//                metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
+//                timeRangeFilter = sessionTimeFilter
+//            )
+//            val aggregateResponse = healthConnectClient.aggregate(durationAggregateRequest)
+//            sleepSessionDataOneDay =
+//                SleepSessionData(
+//                    uid = session.metadata.id,
+//                    title = session.title!!,
+//                    notes = session.notes!!,
+//                    startTime = session.startTime,
+//                    startZoneOffset = session.startZoneOffset,
+//                    endTime = session.endTime,
+//                    endZoneOffset = session.endZoneOffset,
+//                    duration = aggregateResponse[SleepSessionRecord.SLEEP_DURATION_TOTAL],
+//                    stages = session.stages
+//                )
+//
+//        }
+//        return sleepSessionDataOneDay
     }
 //
 //    // 집계 데이터를 가져오기 위해서는 healthConnectClient.aggregate사용한다
